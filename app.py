@@ -7,9 +7,9 @@ from flask import Flask, request, jsonify, send_file, abort
 from flask_cors import CORS
 
 # Config via ENV
-AWS_REGION   = os.environ.get("AWS_REGION", "us-east-1")
-S3_BUCKET    = os.environ.get("S3_BUCKET", "meu-bucket-uploads")
-DDB_TABLE    = os.environ.get("DDB_TABLE", "Images")
+AWS_REGION   = os.environ.get("AWS_REGION", "us-east-2")
+S3_BUCKET    = os.environ.get("S3_BUCKET", "objects-clouda")
+DDB_TABLE    = os.environ.get("DDB_TABLE", "images-base64")
 PRESIGN_EXP  = int(os.environ.get("PRESIGN_EXP", "300"))  # segundos
 
 # Clients
