@@ -2,19 +2,27 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Projeto Insper - Upload e Conversão de Imagens</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <h2>Área de Clientes - Projeto Insper</h2>
 
-    <h3>Fazer upload de imagem:</h3>
-    <input type="file" id="fileUpload">
-    <button onclick="uploadImage()">Enviar Imagem</button>
+    <header>
+        <h1>Área de Clientes - Projeto Insper</h1>
+    </header>
 
-    <h3>Imagens Armazenadas:</h3>
-    <button onclick="listImages()">Listar imagens</button>
-    <ul id="imageList"></ul>
+    <section class="upload-section">
+        <h2>Enviar Nova Imagem</h2>
+        <input type="file" id="fileUpload">
+        <button onclick="uploadImage()">Enviar Imagem</button>
+    </section>
+
+    <section class="images-section">
+        <h2>Imagens Armazenadas</h2>
+        <button onclick="listImages()">Carregar Imagens</button>
+        <ul id="imageList"></ul>
+    </section>
 
     <script src="{{ url_for('static', filename='scripts.js') }}"></script>
 </body>
