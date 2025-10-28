@@ -2,34 +2,29 @@ import os
 import io
 import base64
 import boto3
-from flask import Flask, request, jsonify, send_file, abort
+from flask import Flask, request, jsonify, send_file, abort, render_template
 from flask_cors import CORS
 from boto3.dynamodb.conditions import Key
 
-# ------------------------- Configurações ------------------------- #
+# --------- Configurações e clientes AWS (não alterados) --------- #
 
 AWS_REGION = os.environ.get("AWS_REGION", "us-east-2")
 S3_BUCKET = os.environ.get("S3_BUCKET", "objects-clouda")
 DDB_TABLE = os.environ.get("DDB_TABLE", "images-base64")
-PRESIGN_EXP = int(os.environ.get("PRESIGN_EXP", "300"))  # segundos
-
-# ------------------------- Clientes AWS ------------------------- #
+PRESIGN_EXP = int(os.environ.get("PRESIGN_EXP", "300"))
 
 s3_client = boto3.client("s3", region_name=AWS_REGION)
 dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
 table = dynamodb.Table(DDB_TABLE)
 
-# --------------------------- Flask App --------------------------- #
-
 app = Flask(__name__)
 CORS(app)
 
-# ---------------------------- Rotas ----------------------------- #
+# -------------------------- Rotas Flask ------------------------- #
 
 @app.route("/", methods=["GET"])
 def index():
-    return jsonify({"message": "API Flask funcionando!"}), 200
-
+    return render_template("index.html")
 
 @app.route("/health", methods=["GET"])
 def health():
