@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Projeto Insper - Upload e Conversão de Imagens</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h2>Área de Clientes - Projeto Insper</h2>
+
+    <h3>Fazer upload de imagem:</h3>
+    <input type="file" id="fileUpload">
+    <button onclick="uploadImage()">Enviar Imagem</button>
+
+    <h3>Imagens Armazenadas:</h3>
+    <button onclick="listImages()">Listar imagens</button>
+    <ul id="imageList"></ul>
+
+    <script src="{{ url_for('static', filename='scripts.js') }}"></script>
+</body>
+</html>

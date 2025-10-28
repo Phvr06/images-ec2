@@ -2,23 +2,33 @@ import os
 import io
 import base64
 import boto3
-from decimal import Decimal
 from flask import Flask, request, jsonify, send_file, abort
 from flask_cors import CORS
+from boto3.dynamodb.conditions import Key
 
-# Config via ENV
-AWS_REGION   = os.environ.get("AWS_REGION", "us-east-2")
-S3_BUCKET    = os.environ.get("S3_BUCKET", "objects-clouda")
-DDB_TABLE    = os.environ.get("DDB_TABLE", "images-base64")
-PRESIGN_EXP  = int(os.environ.get("PRESIGN_EXP", "300"))  # segundos
+# ------------------------- Configurações ------------------------- #
 
-# Clients
+AWS_REGION = os.environ.get("AWS_REGION", "us-east-2")
+S3_BUCKET = os.environ.get("S3_BUCKET", "objects-clouda")
+DDB_TABLE = os.environ.get("DDB_TABLE", "images-base64")
+PRESIGN_EXP = int(os.environ.get("PRESIGN_EXP", "300"))  # segundos
+
+# ------------------------- Clientes AWS ------------------------- #
+
 s3_client = boto3.client("s3", region_name=AWS_REGION)
 dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
 table = dynamodb.Table(DDB_TABLE)
 
+# --------------------------- Flask App --------------------------- #
+
 app = Flask(__name__)
 CORS(app)
+
+# ---------------------------- Rotas ----------------------------- #
+
+@app.route("/", methods=["GET"])
+def index():
+    return jsonify({"message": "API Flask funcionando!"}), 200
 
 
 @app.route("/health", methods=["GET"])
@@ -29,17 +39,7 @@ def health():
 @app.route("/api/upload-url", methods=["POST"])
 def upload_url():
     """
-    Recebe JSON:
-    {
-      "filename": "path/para/arquivo.jpg",
-      "contentType": "image/png"
-    }
-    Retorna:
-    {
-      "uploadUrl": "...",
-      "key": "path/para/arquivo.jpg",
-      "expiresIn": 300
-    }
+    Gera uma URL pré-assinada para upload direto ao S3.
     """
     body = request.get_json(force=True, silent=True) or {}
     filename = body.get("filename")
@@ -71,48 +71,77 @@ def upload_url():
 @app.route("/api/images/<string:image_id>", methods=["GET"])
 def get_image(image_id):
     """
-    Recupera todos os chunks para imageId da tabela DynamoDB,
-    ordena por chunkId e retorna a imagem binária.
+    Recupera e retorna a imagem armazenada como binário.
     """
-    # Query DynamoDB por partition key imageId
     try:
-        resp = table.query(
-            KeyConditionExpression=boto3.dynamodb.conditions.Key("imageId").eq(image_id)
-        )
-    except Exception as e:
-        app.logger.exception("Erro consultando DynamoDB")
-        return jsonify({"error": "dynamodb query failed", "detail": str(e)}), 500
+        resp = table.query(KeyConditionExpression=Key("imageId").eq(image_id))
+        items = resp.get("Items", [])
 
-    items = resp.get("Items", [])
-    if not items:
-        return abort(404, description="Image not found")
+        if not items:
+            return abort(404, description="Image not found")
 
-    # Ordena por chunkId (pode vir como Decimal)
-    try:
         items_sorted = sorted(items, key=lambda x: int(x.get("chunkId", 0)))
-    except Exception:
-        items_sorted = items
-
-    # Concatena as strings base64 e decodifica
-    try:
-        b64_parts = [it["data"] for it in items_sorted]
-        b64_full = "".join(b64_parts)
+        b64_full = "".join(item["data"] for item in items_sorted)
         image_bytes = base64.b64decode(b64_full)
+
+        content_type = items_sorted[0].get("contentType", "application/octet-stream")
+
+        return send_file(
+            io.BytesIO(image_bytes),
+            mimetype=content_type,
+            as_attachment=False,
+            download_name=image_id
+        )
+
     except Exception as e:
         app.logger.exception("Erro reconstituindo imagem")
         return jsonify({"error": "failed to rebuild image", "detail": str(e)}), 500
 
-    # Tenta recuperar contentType do primeiro item se existir
-    content_type = items_sorted[0].get("contentType", "application/octet-stream")
 
-    # Retorna como arquivo binário
-    return send_file(
-        io.BytesIO(image_bytes),
-        mimetype=content_type,
-        as_attachment=False,
-        download_name=image_id
-    )
+@app.route("/api/list-images", methods=["GET"])
+def list_images():
+    """
+    Retorna lista de imagens com imageId e contentType.
+    """
+    try:
+        resp = table.scan(ProjectionExpression="imageId, contentType")
+        images = resp.get("Items", [])
+        return jsonify(images)
 
+    except Exception as e:
+        app.logger.exception("Erro listando imagens")
+        return jsonify({"error": "failed to list images", "detail": str(e)}), 500
+
+
+@app.route("/api/view-image/<string:image_id>", methods=["GET"])
+def view_image_base64(image_id):
+    """
+    Retorna a imagem como JSON contendo Base64 para consumo fácil no frontend.
+    """
+    try:
+        resp = table.query(KeyConditionExpression=Key("imageId").eq(image_id))
+        items = resp.get("Items", [])
+
+        if not items:
+            return abort(404, description="Image not found")
+
+        items_sorted = sorted(items, key=lambda x: int(x.get("chunkId", 0)))
+        b64_full = "".join(item["data"] for item in items_sorted)
+
+        content_type = items_sorted[0].get("contentType", "application/octet-stream")
+
+        return jsonify({
+            "image_id": image_id,
+            "content_type": content_type,
+            "base64_data": b64_full
+        })
+
+    except Exception as e:
+        app.logger.exception("Erro recuperando imagem Base64")
+        return jsonify({"error": "failed to get image", "detail": str(e)}), 500
+
+
+# ---------------------------- Execução ---------------------------- #
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 80))
