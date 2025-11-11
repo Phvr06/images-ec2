@@ -5,28 +5,91 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Projeto Insper - Upload e Conversão de Imagens</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
 
+    <div class="background-decoration"></div>
+
     <header>
-        <h1>Área de Clientes - Projeto Insper</h1>
+        <div class="header-content">
+            <i class="fas fa-cloud-upload-alt header-icon"></i>
+            <h1>Área de Clientes</h1>
+            <p class="subtitle">Projeto Insper - Gestão de Imagens</p>
+        </div>
     </header>
 
-    <section class="upload-section">
-        <h2>Enviar Nova Imagem</h2>
-        <input type="file" id="fileUpload">
-        <button onclick="uploadImage()">Enviar Imagem</button>
-    </section>
+    <div class="container">
+        <section class="upload-section card">
+            <div class="card-header">
+                <i class="fas fa-upload"></i>
+                <h2>Enviar Nova Imagem</h2>
+            </div>
+            <div class="upload-area" id="uploadArea">
+                <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                <p class="upload-text">Arraste uma imagem aqui ou clique para selecionar</p>
+                <p class="upload-hint">PNG, JPG ou JPEG (máx. 10MB)</p>
+                <input type="file" id="fileUpload" accept="image/png,image/jpeg,image/jpg">
+                <button class="btn-primary" onclick="uploadImage()">
+                    <i class="fas fa-paper-plane"></i> Enviar Imagem
+                </button>
+            </div>
+        </section>
 
-    <section class="images-section">
-        <h2>Imagens Armazenadas</h2>
-        <button onclick="listImages()">Carregar Imagens</button>
-        <ul id="imageList"></ul>
+        <section class="images-section card">
+            <div class="card-header">
+                <i class="fas fa-images"></i>
+                <h2>Galeria de Imagens</h2>
+            </div>
+            <button class="btn-secondary" onclick="listImages()">
+                <i class="fas fa-sync-alt"></i> Atualizar Lista
+            </button>
+            <ul id="imageList"></ul>
 
-        <!-- Área para exibir a imagem selecionada -->
-        <div id="imageViewer" class="image-viewer"></div>
-    </section>
+            <div id="imageViewer" class="image-viewer"></div>
+        </section>
+    </div>
 
     <script src="{{ url_for('static', filename='scripts.js') }}"></script>
+    <script>
+        // Drag and drop functionality
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileUpload');
+
+        uploadArea.addEventListener('click', (e) => {
+            if (e.target !== fileInput && !e.target.closest('button')) {
+                fileInput.click();
+            }
+        });
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length) {
+                fileInput.files = files;
+                updateFileName();
+            }
+        });
+
+        fileInput.addEventListener('change', updateFileName);
+
+        function updateFileName() {
+            const file = fileInput.files[0];
+            if (file) {
+                const text = uploadArea.querySelector('.upload-text');
+                text.innerHTML = `<i class="fas fa-file-image"></i> ${file.name}`;
+            }
+        }
+    </script>
 </body>
 </html>
