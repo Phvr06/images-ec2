@@ -96,13 +96,29 @@ def get_image(image_id):
 @app.route("/api/list-images", methods=["GET"])
 def list_images():
     """
-    Retorna lista de imagens únicas (apenas 1 item por imageId).
+    Retorna lista completa de imagens únicas (paginação DynamoDB).
     """
     try:
-        resp = table.scan(ProjectionExpression="imageId, contentType")
-        items = resp.get("Items", [])
+        items = []
+        start_key = None
 
-        # Evita duplicados (vários chunks)
+        while True:
+            if start_key:
+                resp = table.scan(
+                    ProjectionExpression="imageId, contentType",
+                    ExclusiveStartKey=start_key
+                )
+            else:
+                resp = table.scan(ProjectionExpression="imageId, contentType")
+
+            items.extend(resp.get("Items", []))
+
+            # Se houver mais páginas, continua o loop
+            start_key = resp.get("LastEvaluatedKey")
+            if not start_key:
+                break
+
+        # Evita duplicados (mantém um item por imageId)
         unique = {}
         for item in items:
             img_id = item.get("imageId")
@@ -117,6 +133,7 @@ def list_images():
     except Exception as e:
         app.logger.exception("Erro listando imagens")
         return jsonify({"error": "failed to list images", "detail": str(e)}), 500
+
 
 
 @app.route("/api/view-image/<string:image_id>", methods=["GET"])
