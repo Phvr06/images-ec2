@@ -166,33 +166,33 @@ def view_image_base64(image_id):
         all_items = []
         start_key = None
 
-        # IMPORTANTE: Buscar TODOS os chunks com paginação completa
         while True:
+            query_params = {
+                "KeyConditionExpression": Key("imageId").eq(image_id),
+                "ScanIndexForward": True
+            }
             if start_key:
-                resp = table.query(
-                    KeyConditionExpression=Key("imageId").eq(image_id),
-                    ExclusiveStartKey=start_key
-                )
-            else:
-                resp = table.query(KeyConditionExpression=Key("imageId").eq(image_id))
+                query_params["ExclusiveStartKey"] = start_key
 
+            resp = table.query(**query_params)
             all_items.extend(resp.get("Items", []))
             start_key = resp.get("LastEvaluatedKey")
 
-            # Continuar até não haver mais páginas
             if not start_key:
                 break
 
         if not all_items:
             return abort(404, description="Image not found")
 
-        # Ordenar por chunkId (IMPORTANTE: converter para int)
+        # Ordenar os chunks de forma confiável
         items_sorted = sorted(all_items, key=lambda x: int(x.get("chunkId", 0)))
-        
-        # Log para debug - verificar quantos chunks foram recuperados
-        app.logger.info(f"view_image_base64 - Imagem {image_id}: {len(items_sorted)} chunks recuperados")
-        
-        # Juntar todos os chunks de base64
+
+        total_size = sum(len(item["data"]) for item in items_sorted)
+        app.logger.info(f"{image_id}: {len(items_sorted)} chunks ({total_size} bytes Base64)")
+
+        if total_size > 50_000_000:  # 50MB de base64 ≈ 35MB binário
+            abort(413, description="Imagem muito grande para reconstruir via API")
+
         b64_full = "".join(item["data"] for item in items_sorted)
         content_type = items_sorted[0].get("contentType", "application/octet-stream")
 
@@ -200,12 +200,13 @@ def view_image_base64(image_id):
             "image_id": image_id,
             "content_type": content_type,
             "base64_data": b64_full,
-            "total_chunks": len(items_sorted)  # Adicionar info de debug
+            "total_chunks": len(items_sorted)
         })
 
     except Exception as e:
         app.logger.exception("Erro recuperando imagem Base64")
         return jsonify({"error": "failed to get image", "detail": str(e)}), 500
+
 
 
 
