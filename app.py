@@ -96,12 +96,23 @@ def get_image(image_id):
 @app.route("/api/list-images", methods=["GET"])
 def list_images():
     """
-    Retorna lista de imagens com imageId e contentType.
+    Retorna lista de imagens únicas (apenas 1 item por imageId).
     """
     try:
         resp = table.scan(ProjectionExpression="imageId, contentType")
-        images = resp.get("Items", [])
-        return jsonify(images)
+        items = resp.get("Items", [])
+
+        # Evita duplicados (vários chunks)
+        unique = {}
+        for item in items:
+            img_id = item.get("imageId")
+            if img_id not in unique:
+                unique[img_id] = {
+                    "imageId": img_id,
+                    "contentType": item.get("contentType", "application/octet-stream")
+                }
+
+        return jsonify(list(unique.values()))
 
     except Exception as e:
         app.logger.exception("Erro listando imagens")

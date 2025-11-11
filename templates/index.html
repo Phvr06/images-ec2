@@ -22,6 +22,9 @@
         <h2>Imagens Armazenadas</h2>
         <button onclick="listImages()">Carregar Imagens</button>
         <ul id="imageList"></ul>
+
+        <!-- Área para exibir a imagem selecionada -->
+        <div id="imageViewer" class="image-viewer"></div>
     </section>
 
     <script src="{{ url_for('static', filename='scripts.js') }}"></script>
