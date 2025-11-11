@@ -69,13 +69,34 @@ def get_image(image_id):
     Recupera e retorna a imagem armazenada como binário.
     """
     try:
-        resp = table.query(KeyConditionExpression=Key("imageId").eq(image_id))
-        items = resp.get("Items", [])
+        # Buscar TODOS os chunks com paginação
+        all_items = []
+        start_key = None
 
-        if not items:
+        while True:
+            if start_key:
+                resp = table.query(
+                    KeyConditionExpression=Key("imageId").eq(image_id),
+                    ExclusiveStartKey=start_key
+                )
+            else:
+                resp = table.query(KeyConditionExpression=Key("imageId").eq(image_id))
+
+            all_items.extend(resp.get("Items", []))
+            start_key = resp.get("LastEvaluatedKey")
+
+            if not start_key:
+                break
+
+        if not all_items:
             return abort(404, description="Image not found")
 
-        items_sorted = sorted(items, key=lambda x: int(x.get("chunkId", 0)))
+        # Ordenar por chunkId (convertendo para int)
+        items_sorted = sorted(all_items, key=lambda x: int(x.get("chunkId", 0)))
+        
+        # Log para debug
+        app.logger.info(f"Imagem {image_id}: {len(items_sorted)} chunks encontrados")
+        
         b64_full = "".join(item["data"] for item in items_sorted)
         image_bytes = base64.b64decode(b64_full)
 
@@ -145,6 +166,7 @@ def view_image_base64(image_id):
         all_items = []
         start_key = None
 
+        # IMPORTANTE: Buscar TODOS os chunks com paginação completa
         while True:
             if start_key:
                 resp = table.query(
@@ -157,20 +179,28 @@ def view_image_base64(image_id):
             all_items.extend(resp.get("Items", []))
             start_key = resp.get("LastEvaluatedKey")
 
+            # Continuar até não haver mais páginas
             if not start_key:
                 break
 
         if not all_items:
             return abort(404, description="Image not found")
 
+        # Ordenar por chunkId (IMPORTANTE: converter para int)
         items_sorted = sorted(all_items, key=lambda x: int(x.get("chunkId", 0)))
+        
+        # Log para debug - verificar quantos chunks foram recuperados
+        app.logger.info(f"view_image_base64 - Imagem {image_id}: {len(items_sorted)} chunks recuperados")
+        
+        # Juntar todos os chunks de base64
         b64_full = "".join(item["data"] for item in items_sorted)
         content_type = items_sorted[0].get("contentType", "application/octet-stream")
 
         return jsonify({
             "image_id": image_id,
             "content_type": content_type,
-            "base64_data": b64_full
+            "base64_data": b64_full,
+            "total_chunks": len(items_sorted)  # Adicionar info de debug
         })
 
     except Exception as e:
@@ -183,4 +213,4 @@ def view_image_base64(image_id):
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 80))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, debug=True)  # debug=True para ver os logs
