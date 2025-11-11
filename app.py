@@ -139,18 +139,32 @@ def list_images():
 @app.route("/api/view-image/<string:image_id>", methods=["GET"])
 def view_image_base64(image_id):
     """
-    Retorna a imagem como JSON contendo Base64 para consumo fácil no frontend.
+    Retorna a imagem completa (com paginação DynamoDB) como Base64.
     """
     try:
-        resp = table.query(KeyConditionExpression=Key("imageId").eq(image_id))
-        items = resp.get("Items", [])
+        all_items = []
+        start_key = None
 
-        if not items:
+        while True:
+            if start_key:
+                resp = table.query(
+                    KeyConditionExpression=Key("imageId").eq(image_id),
+                    ExclusiveStartKey=start_key
+                )
+            else:
+                resp = table.query(KeyConditionExpression=Key("imageId").eq(image_id))
+
+            all_items.extend(resp.get("Items", []))
+            start_key = resp.get("LastEvaluatedKey")
+
+            if not start_key:
+                break
+
+        if not all_items:
             return abort(404, description="Image not found")
 
-        items_sorted = sorted(items, key=lambda x: int(x.get("chunkId", 0)))
+        items_sorted = sorted(all_items, key=lambda x: int(x.get("chunkId", 0)))
         b64_full = "".join(item["data"] for item in items_sorted)
-
         content_type = items_sorted[0].get("contentType", "application/octet-stream")
 
         return jsonify({
@@ -162,6 +176,7 @@ def view_image_base64(image_id):
     except Exception as e:
         app.logger.exception("Erro recuperando imagem Base64")
         return jsonify({"error": "failed to get image", "detail": str(e)}), 500
+
 
 
 # ---------------------------- Execução ---------------------------- #
