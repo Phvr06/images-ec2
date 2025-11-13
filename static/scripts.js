@@ -45,7 +45,7 @@ function listImages() {
 }
 
 function viewImage(imageId) {
-    fetch(`/api/view-image/${imageId}`)
+    fetch(`/api/images/${imageId}`)
     .then(res => res.json())
     .then(img => {
         const viewer = document.getElementById('imageViewer');
