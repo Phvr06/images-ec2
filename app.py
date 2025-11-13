@@ -30,7 +30,6 @@ def index():
 def health():
     return jsonify({"status": "ok"}), 200
 
-
 @app.route("/api/upload-url", methods=["POST"])
 def upload_url():
     """
@@ -63,7 +62,7 @@ def upload_url():
     })
 
 
-@app.route("/api/images/<string:image_id>", methods=["GET"])
+@app.route("/api/view-image/<string:image_id>", methods=["GET"])
 def get_image(image_id):
     """
     Recupera e retorna a imagem armazenada como binário.
@@ -156,8 +155,7 @@ def list_images():
         return jsonify({"error": "failed to list images", "detail": str(e)}), 500
 
 
-
-@app.route("/api/view-image/<string:image_id>", methods=["GET"])
+@app.route("/api/images/<string:image_id>", methods=["GET"])
 def view_image_base64(image_id):
     """
     Retorna a imagem completa (com paginação DynamoDB) como Base64.
