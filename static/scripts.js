@@ -68,6 +68,7 @@ function viewImage(imageId) {
             </a>
         `;
         viewer.scrollIntoView({ behavior: 'smooth' });
+        console.log("Base64: " + img.base64_data)
     })
     .catch(err => alert('Erro ao recuperar imagem: ' + err));
 }
