@@ -63,7 +63,7 @@ function viewImage(imageId) {
                  alt="${imageId}" 
                  style="max-width: 100%; border-radius: 8px; margin-top: 10px;">
             <br>
-            <a href="/api/images/${imageId}" target="_blank" class="btn-secondary" style="margin-top: 15px; text-decoration: none; display: inline-block;">
+            <a href="/api/images/${imageId}" target="_blank" class="btn-secondary" style="padding: 3px; margin-top: 15px; text-decoration: none; display: inline-block;">
                 <i class="fas fa-code"></i> Ver Base64
             </a>
         `;
