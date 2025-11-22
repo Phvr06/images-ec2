@@ -14,6 +14,12 @@ function uploadImage() {
         return;
     }
 
+    const maxSizeInBytes = 2 * 1024 * 1024; // 2MB
+    if (file.size > maxSizeInBytes) {
+        alert('O arquivo excede o limite máximo de 2MB!');
+        return;
+    }
+
     fetch('/api/upload-url', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
