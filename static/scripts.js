@@ -49,11 +49,17 @@ function viewImage(imageId) {
     .then(res => res.json())
     .then(img => {
         const viewer = document.getElementById('imageViewer');
+        
+        // Adicionado o botão "Ver Base64" abaixo da imagem
         viewer.innerHTML = `
             <h3>Visualizando: ${imageId}</h3>
             <img src="data:${img.content_type};base64,${img.base64_data}" 
                  alt="${imageId}" 
                  style="max-width: 100%; border-radius: 8px; margin-top: 10px;">
+            <br>
+            <a href="/api/images/${imageId}" target="_blank" class="btn-secondary" style="margin-top: 15px; text-decoration: none; display: inline-block;">
+                <i class="fas fa-code"></i> Ver Base64
+            </a>
         `;
         viewer.scrollIntoView({ behavior: 'smooth' });
     })
